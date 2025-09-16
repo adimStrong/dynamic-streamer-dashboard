@@ -1,4 +1,4 @@
-export default function handler(req, res) {
+module.exports = function handler(req, res) {
     // Simple mock data to test if the dashboard works
     const mockData = {
         lastUpdated: new Date().toISOString(),
@@ -52,4 +52,4 @@ export default function handler(req, res) {
     };
 
     res.status(200).json(mockData);
-}
+};

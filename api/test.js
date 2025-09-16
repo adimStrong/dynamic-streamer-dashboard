@@ -1,4 +1,4 @@
-export default function handler(req, res) {
+module.exports = function handler(req, res) {
     res.status(200).json({
         message: "API is working!",
         timestamp: new Date().toISOString(),
@@ -9,4 +9,4 @@ export default function handler(req, res) {
             hasAuth: !!process.env.AUTH_USERNAME
         }
     });
-}
+};

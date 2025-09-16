@@ -78,7 +78,7 @@ async function fetchSheetsData() {
     }
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
     const data = await fetchSheetsData();
 
     if (data) {
