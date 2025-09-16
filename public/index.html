@@ -207,9 +207,127 @@
             font-size: 0.8em;
             color: #636e72;
         }
+        /* Credentials Popup Styles */
+        .popup-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            backdrop-filter: blur(5px);
+        }
+
+        .popup-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            color: white;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+            animation: popupSlideIn 0.3s ease-out;
+        }
+
+        @keyframes popupSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px) scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+
+        .popup-content h2 {
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .popup-content p {
+            margin-bottom: 30px;
+            font-size: 1.1em;
+            line-height: 1.6;
+            opacity: 0.9;
+        }
+
+        .credentials-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            text-align: left;
+        }
+
+        .credential-item {
+            margin-bottom: 10px;
+            font-family: monospace;
+            font-size: 1.1em;
+        }
+
+        .credential-label {
+            font-weight: bold;
+            color: #fdcb6e;
+        }
+
+        .credential-value {
+            color: #74b9ff;
+            font-weight: bold;
+        }
+
+        .popup-btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 25px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+            color: white;
+            box-shadow: 0 4px 15px rgba(255, 107, 107, 0.4);
+        }
+
+        .popup-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+        }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
+    <!-- Login Credentials Popup -->
+    <div id="credentialsPopup" class="popup-overlay">
+        <div class="popup-content">
+            <h2>🔑 Dashboard Access</h2>
+            <p>Use these credentials to access the D.A Streaming Analytics Dashboard:</p>
+            <div class="credentials-box">
+                <div class="credential-item">
+                    <span class="credential-label">Username:</span>
+                    <span class="credential-value">admin</span>
+                </div>
+                <div class="credential-item">
+                    <span class="credential-label">Password:</span>
+                    <span class="credential-value">dashboard2024</span>
+                </div>
+            </div>
+            <p style="font-size: 0.9em; opacity: 0.8;">Click "Got it!" to continue to the dashboard</p>
+            <button onclick="closePopup()" class="popup-btn">
+                Got it! 👍
+            </button>
+        </div>
+    </div>
+
     <div class="dashboard">
         <div class="header">
             <h1>📊 D.A Streaming Analytics Dashboard</h1>
@@ -560,6 +678,30 @@
 
         // Initialize dashboard when page loads
         document.addEventListener('DOMContentLoaded', initializeDashboard);
+
+        // Credentials popup functions
+        function closePopup() {
+            const popup = document.getElementById('credentialsPopup');
+            popup.classList.add('hidden');
+
+            // Store preference to not show popup again for this session
+            sessionStorage.setItem('credentialsShown', 'true');
+        }
+
+        // Show popup on page load (unless dismissed in current session)
+        window.addEventListener('DOMContentLoaded', () => {
+            const credentialsShown = sessionStorage.getItem('credentialsShown');
+
+            if (!credentialsShown) {
+                // Show popup for first-time visitors
+                const popup = document.getElementById('credentialsPopup');
+                popup.classList.remove('hidden');
+            } else {
+                // Hide popup if already seen this session
+                const popup = document.getElementById('credentialsPopup');
+                popup.classList.add('hidden');
+            }
+        });
     </script>
 </body>
 </html>
