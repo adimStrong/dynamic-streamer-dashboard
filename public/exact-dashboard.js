@@ -1,5 +1,10 @@
-// Socket.io connection for real-time Google Sheets updates
-const socket = io();
+// Socket.io connection for real-time Google Sheets updates (disabled for standalone mode)
+// const socket = io();
+const socket = {
+    on: () => {},
+    emit: () => {},
+    connected: false
+};
 
 // Complete dataset from your original file (all 62 streams)
 let streamData = [
