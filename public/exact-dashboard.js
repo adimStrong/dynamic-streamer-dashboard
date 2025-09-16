@@ -1,5 +1,4 @@
-// Socket.io connection for real-time Google Sheets updates (disabled for standalone mode)
-// const socket = io();
+// Dashboard now works standalone without Socket.IO dependency
 const socket = {
     on: () => {},
     emit: () => {},
