@@ -1,6 +1,6 @@
 // D.A Streaming Analytics Dashboard - Static version for GitHub Pages
 
-// Complete dataset from your original file (all 62 streams)
+// Complete dataset from your original file (all 66 streams)
 let streamData = [
     {date: '2025-08-09', views: 1037, comments: 257, reactions: 131, shares: 282, linkClicks: 1, newFollowers: 7, totalFollowers: 294, extraNewFollowers: 294, streamer: 'Abi and Sena', type: 'live'},
     {date: '2025-08-10', views: 931, comments: 298, reactions: 78, shares: 282, linkClicks: 0, newFollowers: 1, totalFollowers: 346, extraNewFollowers: 52, streamer: 'Abi and Sena', type: 'live'},
@@ -79,7 +79,6 @@ let charts = {};
 function initializeDashboard() {
     console.log('Initializing D.A Dashboard with static data');
     console.log('Available stream data:', streamData.length, 'records');
-
     updateConnectionStatus(true); // Set as connected since we have static data
 
     // Ensure data is properly initialized
@@ -110,24 +109,24 @@ function getStreamerTag(streamer) {
         'Zell': 'streamer-zell',
         'Jam': 'streamer-jam',
     };
-    
+
     let className = 'streamer-abi';
     Object.keys(classes).forEach(name => {
         if (streamer.includes(name)) {
             className = classes[name];
         }
     });
-    
+
     return `<span class="streamer-tag ${className}">${streamer}</span>`;
 }
 
 function updateConnectionStatus(connected) {
     const statusElement = document.getElementById('statusText');
     if (connected) {
-        statusElement.textContent = '🟢 Ready - D.A Analytics Data Loaded';
+        statusElement.textContent = '🟢 Connected - Live Updates';
         statusElement.className = 'status-connected';
     } else {
-        statusElement.textContent = '🔴 Loading Data...';
+        statusElement.textContent = '🔴 Disconnected - Retrying...';
         statusElement.className = 'status-disconnected';
     }
 }
@@ -135,10 +134,10 @@ function updateConnectionStatus(connected) {
 function calculateDuration(startTime, endTime) {
     const [startHour, startMin] = startTime.split(':').map(Number);
     const [endHour, endMin] = endTime.split(':').map(Number);
-    
+
     const startTotalMin = startHour * 60 + startMin;
     const endTotalMin = endHour * 60 + endMin;
-    
+
     return endTotalMin - startTotalMin;
 }
 
@@ -151,20 +150,20 @@ function applyFilters() {
     filteredData = streamData.filter(item => {
         // Individual streamer filter
         let includeStreamer = streamerFilter === 'all' || item.streamer.includes(streamerFilter);
-        
+
         // Collaboration filter (exact match for specific collaborations)
         let includeCollab = collabFilter === 'all' || item.streamer === collabFilter;
-        
+
         // Stream type filter
         let includeType = streamTypeFilter === 'all' || item.type === streamTypeFilter;
-        
+
         // Date filter
         let includeDate = true;
         if (dateFilter !== 'all') {
             const itemDate = new Date(item.date);
             const today = new Date('2025-09-11');
             const daysDiff = Math.ceil((today - itemDate) / (1000 * 60 * 60 * 24));
-            
+
             switch(dateFilter) {
                 case 'last3':
                     includeDate = daysDiff <= 2;
@@ -183,7 +182,7 @@ function applyFilters() {
                     break;
             }
         }
-        
+
         return includeStreamer && includeCollab && includeDate && includeType;
     });
 
@@ -198,11 +197,11 @@ function calculateStats() {
     const avgViews = Math.round(totalViews / totalStreams);
     const totalEngagement = filteredData.reduce((sum, item) => sum + item.comments + item.reactions + item.shares, 0);
     const followerGrowth = filteredData.reduce((sum, item) => sum + item.extraNewFollowers, 0);
-    
+
     // Calculate total engagement rate: (Total Engagement / Current Followers) × 100
     const currentTotalFollowers = Math.max(...filteredData.map(item => item.totalFollowers));
     const totalEngagementRate = (totalEngagement / currentTotalFollowers) * 100;
-    
+
     // Debug: Log calculations to compare with HTML file
     console.log('=== DASHBOARD CALCULATIONS DEBUG ===');
     console.log('Total Streams:', totalStreams);
@@ -236,12 +235,12 @@ function calculateStats() {
         document.getElementById('bestStream').textContent = bestStream.views.toLocaleString() + ' views';
         document.getElementById('topEngagement').textContent = (topEngagementDay.comments + topEngagementDay.reactions + topEngagementDay.shares).toLocaleString();
         document.getElementById('biggestGrowth').textContent = '+' + biggestGrowthDay.newFollowers.toLocaleString();
-        
+
         document.getElementById('bestStreamDesc').textContent = `${bestStream.streamer} - ${formatDate(bestStream.date)}`;
         document.getElementById('topEngagementDesc').textContent = `${topEngagementDay.streamer} - ${formatDate(topEngagementDay.date)}`;
         document.getElementById('biggestGrowthDesc').textContent = `${biggestGrowthDay.streamer} - ${formatDate(biggestGrowthDay.date)}`;
     }
-    
+
     // Update performance breakdown cards
     updatePerformanceBreakdown();
 }
@@ -315,12 +314,12 @@ function updateTopPerformers() {
         // If values are equal, sort by name alphabetically as tiebreaker
         return a.name.localeCompare(b.name);
     });
-    
+
     // Limit to top N
     if (topN !== 'all') {
         sortedStreamers = sortedStreamers.slice(0, parseInt(topN));
     }
-    
+
     // Generate HTML for individual streams with dynamic colors
     container.innerHTML = sortedStreamers.map((streamer, index) => `
         <div class="top-performer-card">
@@ -356,17 +355,17 @@ function updateIndividualPerformers() {
     const topN = document.getElementById('topNIndividualFilter').value;
     const sortBy = document.getElementById('sortByIndividualFilter').value;
     const container = document.getElementById('topIndividualPerformersGrid');
-    
+
     if (!container) return;
-    
+
     // Calculate individual streamer statistics across all their participations
     const streamerStats = {};
-    
+
     filteredData.forEach(item => {
         // Match HTML parsing logic exactly: handle both "Name1, Name2 and Name3" and "Name1 and Name2"
         const streamers = item.streamer.split(/,\s*|\s+and\s+/).filter(s => s.trim());
         const totalEngagement = item.comments + item.reactions + item.shares;
-        
+
         streamers.forEach(streamer => {
             streamer = streamer.trim();
             if (!streamerStats[streamer]) {
@@ -382,13 +381,13 @@ function updateIndividualPerformers() {
                     engagementRate: 0
                 };
             }
-            
+
             // Give full stream stats to each participant (like HTML file)
             streamerStats[streamer].totalViews += item.views;
             streamerStats[streamer].totalEngagement += totalEngagement;
             streamerStats[streamer].totalFollowers += item.extraNewFollowers || 0;
             streamerStats[streamer].streams += 1;
-            
+
             // Track collaboration vs solo participation like HTML file
             if (streamers.length === 1) {
                 streamerStats[streamer].soloCount += 1;
@@ -397,7 +396,7 @@ function updateIndividualPerformers() {
             }
         });
     });
-    
+
     // Calculate averages and engagement rates
     console.log('=== INDIVIDUAL STREAMER PERFORMANCE DEBUG ===');
     let totalIndividualViews = 0;
@@ -412,7 +411,7 @@ function updateIndividualPerformers() {
     console.log(`Individual Performance Total Views: ${totalIndividualViews}`);
     console.log(`Individual Performance Total Engagement: ${totalIndividualEngagement}`);
     console.log('=== END INDIVIDUAL STREAMER DEBUG ===');
-    
+
     // Convert to array and sort
     const streamersArray = Object.values(streamerStats);
     streamersArray.sort((a, b) => {
@@ -429,18 +428,18 @@ function updateIndividualPerformers() {
                 return b.engagementRate - a.engagementRate;
         }
     });
-    
+
     // Limit to top N like HTML file
     const topStreamers = topN === 'all' ? streamersArray : streamersArray.slice(0, parseInt(topN));
-    
+
     // Update the grid like HTML file does
     container.innerHTML = '';
     topStreamers.forEach((streamer, index) => {
         const card = document.createElement('div');
         card.className = 'top-performer-card';
-        
+
         const rankClass = index === 0 ? 'rank-1' : index === 1 ? 'rank-2' : index === 2 ? 'rank-3' : '';
-        
+
         // Create participation breakdown like HTML file
         let participationType = '';
         if (streamer.soloCount > 0 && streamer.collaborationCount > 0) {
@@ -450,7 +449,7 @@ function updateIndividualPerformers() {
         } else {
             participationType = `${streamer.collaborationCount} collaborations`;
         }
-        
+
         card.innerHTML = `
             <div class="rank-badge ${rankClass}">${index + 1}</div>
             <div class="performer-name">${streamer.name}</div>
@@ -488,7 +487,7 @@ function updateIndividualPerformers() {
                 <div style="font-size: 0.9em;">Engagement Rate (Views-Based)</div>
             </div>
         `;
-        
+
         container.appendChild(card);
     });
 }
@@ -498,12 +497,12 @@ function updatePerformanceBreakdown() {
     const streamerStats = {};
     const collabStats = {};
     const individualStreamerStats = {};
-    
+
     filteredData.forEach(item => {
         // Match HTML parsing logic exactly: handle both "Name1, Name2 and Name3" and "Name1 and Name2"
         const streamers = item.streamer.split(/,\s*|\s+and\s+/).filter(s => s.trim());
         const totalEngagement = item.comments + item.reactions + item.shares;
-        
+
         // Track individual streamer performance across all their streams (solo + collabs)
         streamers.forEach(streamer => {
             if (!individualStreamerStats[streamer]) {
@@ -520,7 +519,7 @@ function updatePerformanceBreakdown() {
             individualStreamerStats[streamer].engagement += totalEngagement;
             individualStreamerStats[streamer].followers += item.newFollowers;
             individualStreamerStats[streamer].streams += 1;
-            
+
             if (streamers.length > 1) {
                 // Add collaboration partners
                 streamers.forEach(partner => {
@@ -530,7 +529,7 @@ function updatePerformanceBreakdown() {
                 });
             }
         });
-        
+
         if (streamers.length === 1) {
             // Solo streamer
             const streamer = streamers[0];
@@ -596,7 +595,7 @@ function updatePerformanceBreakdown() {
     const collabContainer = document.getElementById('collaborationsCards');
     if (collabContainer) {
         collabContainer.innerHTML = '';
-        
+
         Object.entries(collabStats).forEach(([collab, stats]) => {
             const card = document.createElement('div');
             card.className = 'summary-card';
@@ -696,17 +695,17 @@ function getCollabGradient(collab) {
 function updateDataTable() {
     const tableBody = document.getElementById('dataTableBody');
     if (!tableBody) return;
-    
+
     tableBody.innerHTML = '';
-    
+
     // Sort by date (latest first)
     const sortedData = [...filteredData].sort((a, b) => new Date(b.date) - new Date(a.date));
-    
+
     sortedData.forEach(item => {
         const totalEngagement = item.comments + item.reactions + item.shares;
         const engagementRate = item.totalFollowers > 0 ? ((totalEngagement / item.totalFollowers) * 100).toFixed(2) : '0.00';
         const engagementRateViews = item.views > 0 ? ((totalEngagement / item.views) * 100).toFixed(2) : '0.00';
-        
+
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${formatDate(item.date)}</td>
@@ -758,12 +757,12 @@ function updateCharts() {
 function createViewsChart() {
     const ctx = document.getElementById('viewsChart');
     if (!ctx) return;
-    
+
     // Destroy existing chart if it exists
     if (charts.viewsChart) {
         charts.viewsChart.destroy();
     }
-    
+
     // Group data by date and sum views (matching HTML logic exactly)
     const dailyData = {};
     filteredData.forEach(item => {
@@ -775,9 +774,9 @@ function createViewsChart() {
         }
         dailyData[item.date].views += item.views;
     });
-    
+
     const sortedDailyData = Object.values(dailyData).sort((a, b) => new Date(a.date) - new Date(b.date));
-    
+
     charts.viewsChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -823,11 +822,11 @@ function createViewsChart() {
 function createFollowersChart() {
     const ctx = document.getElementById('followersChart');
     if (!ctx) return;
-    
+
     if (charts.followersChart) {
         charts.followersChart.destroy();
     }
-    
+
     // Group data by date and sum values (using newFollowers field)
     const dailyData = {};
     filteredData.forEach(item => {
@@ -839,10 +838,10 @@ function createFollowersChart() {
         }
         dailyData[item.date].newFollowers += item.newFollowers || 0;
     });
-    
+
     const sortedDailyData = Object.values(dailyData).sort((a, b) => new Date(a.date) - new Date(b.date));
     const labels = sortedDailyData.map(item => formatDate(item.date));
-    
+
     charts.followersChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -873,11 +872,11 @@ function createFollowersChart() {
 function createEngagementChart() {
     const ctx = document.getElementById('engagementChart');
     if (!ctx) return;
-    
+
     if (charts.engagementChart) {
         charts.engagementChart.destroy();
     }
-    
+
     // Group data by date and sum values like HTML file does
     const dailyData = {};
     filteredData.forEach(item => {
@@ -901,9 +900,9 @@ function createEngagementChart() {
         dailyData[item.date].totalFollowers = Math.max(dailyData[item.date].totalFollowers, item.totalFollowers);
         dailyData[item.date].streamCount += 1;
     });
-    
+
     const sortedDailyData = Object.values(dailyData).sort((a, b) => new Date(a.date) - new Date(b.date));
-    
+
     charts.engagementChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -950,11 +949,11 @@ function createEngagementChart() {
 function createEngagementRateChart() {
     const ctx = document.getElementById('engagementRateChart');
     if (!ctx) return;
-    
+
     if (charts.engagementRateChart) {
         charts.engagementRateChart.destroy();
     }
-    
+
     // Group data by date and sum values like HTML file does
     const dailyData = {};
     filteredData.forEach(item => {
@@ -978,15 +977,15 @@ function createEngagementRateChart() {
         dailyData[item.date].totalFollowers = Math.max(dailyData[item.date].totalFollowers, item.totalFollowers);
         dailyData[item.date].streamCount += 1;
     });
-    
+
     const sortedDailyData = Object.values(dailyData).sort((a, b) => new Date(a.date) - new Date(b.date));
     const maxFollowers = Math.max(...sortedDailyData.map(item => item.totalFollowers));
-    
+
     const engagementRates = sortedDailyData.map(item => {
         const totalEng = item.comments + item.reactions + item.shares;
         return maxFollowers > 0 ? (totalEng / maxFollowers * 100) : 0;
     });
-    
+
     charts.engagementRateChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -1020,11 +1019,11 @@ function createEngagementRateChart() {
 function createEngagementRateViewsChart() {
     const ctx = document.getElementById('engagementRateViewsChart');
     if (!ctx) return;
-    
+
     if (charts.engagementRateViewsChart) {
         charts.engagementRateViewsChart.destroy();
     }
-    
+
     // Group data by date and sum values like HTML file does
     const dailyData = {};
     filteredData.forEach(item => {
@@ -1040,7 +1039,7 @@ function createEngagementRateViewsChart() {
                 streamCount: 0
             };
         }
-        
+
         // Add this stream's data to the daily totals
         dailyData[item.date].views += item.views;
         dailyData[item.date].comments += item.comments;
@@ -1049,7 +1048,7 @@ function createEngagementRateViewsChart() {
         dailyData[item.date].newFollowers += item.newFollowers;
         dailyData[item.date].totalFollowers = Math.max(dailyData[item.date].totalFollowers, item.totalFollowers);
         dailyData[item.date].streamCount += 1;
-        
+
         // Debug: Log individual stream contributions for multi-stream days
         if (dailyData[item.date].streamCount > 1) {
             const totalEng = item.comments + item.reactions + item.shares;
@@ -1057,9 +1056,9 @@ function createEngagementRateViewsChart() {
             console.log(`Running totals for ${item.date}: Views=${dailyData[item.date].views}, Engagement=${dailyData[item.date].comments + dailyData[item.date].reactions + dailyData[item.date].shares}`);
         }
     });
-    
+
     const sortedDailyData = Object.values(dailyData).sort((a, b) => new Date(a.date) - new Date(b.date));
-    
+
     charts.engagementRateViewsChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -1069,13 +1068,13 @@ function createEngagementRateViewsChart() {
                 data: sortedDailyData.map(item => {
                     const totalEng = item.comments + item.reactions + item.shares;
                     const result = item.views > 0 ? ((totalEng / item.views) * 100).toFixed(2) : 0;
-                    
+
                     // Detailed comparison logging
                     if (item.date.includes('2025-09-13') || item.date.includes('2025-09-11') || item.date.includes('2025-09-10') || item.date.includes('2025-09-09')) {
                         console.log(`COMPARISON - ${item.date}: Views=${item.views}, Comments=${item.comments}, Reactions=${item.reactions}, Shares=${item.shares}`);
                         console.log(`COMPARISON - ${item.date}: TotalEng=${totalEng}, Rate=${result}%`);
                     }
-                    
+
                     return result;
                 }),
                 borderColor: 'rgb(0, 206, 201)',
@@ -1121,11 +1120,11 @@ function createEngagementRateViewsChart() {
 function createStreamerChart() {
     const ctx = document.getElementById('streamerChart');
     if (!ctx) return;
-    
+
     if (charts.streamerChart) {
         charts.streamerChart.destroy();
     }
-    
+
     // Aggregate data by streamer
     const streamerStats = {};
     filteredData.forEach(item => {
@@ -1140,10 +1139,10 @@ function createStreamerChart() {
             streamerStats[streamer].streams += 1;
         });
     });
-    
+
     const streamers = Object.keys(streamerStats);
     const views = Object.values(streamerStats).map(s => s.views);
-    
+
     charts.streamerChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
@@ -1175,11 +1174,11 @@ function createStreamerChart() {
 function createWeeklyChart() {
     const ctx = document.getElementById('weeklyChart');
     if (!ctx) return;
-    
+
     if (charts.weeklyChart) {
         charts.weeklyChart.destroy();
     }
-    
+
     // Group data by date and sum values like HTML file does first
     const dailyData = {};
     filteredData.forEach(item => {
@@ -1203,61 +1202,61 @@ function createWeeklyChart() {
         dailyData[item.date].totalFollowers = Math.max(dailyData[item.date].totalFollowers, item.totalFollowers);
         dailyData[item.date].streamCount += 1;
     });
-    
+
     const sortedDailyData = Object.values(dailyData).sort((a, b) => new Date(a.date) - new Date(b.date));
-    
+
     // Generate dynamic week ranges based on data
     const dataStartDate = new Date(Math.min(...sortedDailyData.map(item => new Date(item.date))));
     const dataEndDate = new Date(Math.max(...sortedDailyData.map(item => new Date(item.date))));
-    
+
     const weekRanges = [];
     let currentWeekStart = new Date(dataStartDate);
-    
+
     // Start from the beginning of the week containing the first data point
     currentWeekStart.setDate(currentWeekStart.getDate() - currentWeekStart.getDay());
-    
+
     while (currentWeekStart <= dataEndDate) {
         const weekEnd = new Date(currentWeekStart);
         weekEnd.setDate(weekEnd.getDate() + 6); // End of week (6 days after start)
-        
+
         // Don't go beyond our data range
         if (weekEnd > dataEndDate) {
             weekEnd.setTime(dataEndDate.getTime());
         }
-        
+
         const startMonth = currentWeekStart.getMonth() + 1;
         const startDay = currentWeekStart.getDate();
         const endMonth = weekEnd.getMonth() + 1;
         const endDay = weekEnd.getDate();
-        
+
         const monthNames = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         let label = '';
-        
+
         if (startMonth === endMonth) {
             label = `${monthNames[startMonth]} ${startDay}-${endDay}`;
         } else {
             label = `${monthNames[startMonth]} ${startDay}-${monthNames[endMonth]} ${endDay}`;
         }
-        
+
         weekRanges.push({
             start: currentWeekStart.toISOString().split('T')[0],
             end: weekEnd.toISOString().split('T')[0],
             label: label
         });
-        
+
         // Move to next week
         currentWeekStart.setDate(currentWeekStart.getDate() + 7);
     }
-    
+
     const weeklyData = {};
     weekRanges.forEach(range => {
         weeklyData[range.label] = { views: 0, engagement: 0, followers: 0 };
-        
+
         sortedDailyData.forEach(item => {
             const itemDate = new Date(item.date);
             const startDate = new Date(range.start);
             const endDate = new Date(range.end);
-            
+
             if (itemDate >= startDate && itemDate <= endDate) {
                 weeklyData[range.label].views += item.views;
                 weeklyData[range.label].engagement += item.comments + item.reactions + item.shares;
@@ -1265,7 +1264,7 @@ function createWeeklyChart() {
             }
         });
     });
-    
+
     charts.weeklyChart = new Chart(ctx, {
         type: 'bar',
         data: {
@@ -1315,46 +1314,46 @@ function createWeeklyChart() {
 function createDurationChart() {
     const ctx = document.getElementById('durationChart');
     if (!ctx) return;
-    
+
     if (charts.durationChart) {
         charts.durationChart.destroy();
     }
-    
+
     // Time slot groups based on actual data patterns
     const timeSlotGroups = {
         'Afternoon (2:30-4:30 PM)': ['14:30', '15:00'],  // 2:30-3:00 PM streams
         'Early Evening (5:00-7:00 PM)': ['17:00', '17:30', '18:00', '18:38'],  // 5:00-6:38 PM streams
         'Prime Time (7:00-9:30 PM)': ['19:00', '19:30', '20:00', '20:30']  // 7:00-8:30 PM streams
     };
-    
+
     const groupedTimeData = {};
-    
+
     // Initialize groups
     Object.keys(timeSlotGroups).forEach(groupName => {
         groupedTimeData[groupName] = {};
     });
-    
+
     // Process each stream and categorize by time slot (matching HTML logic exactly)
     filteredData.forEach(item => {
         if (!item.startTime || !item.date) return;
-        
+
         // Convert startTime to 24-hour format for matching
         const timeMatch = item.startTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
         if (!timeMatch) return;
-        
+
         let hour = parseInt(timeMatch[1]);
         const minute = parseInt(timeMatch[2]);
         const ampm = timeMatch[3].toUpperCase();
-        
+
         // Convert to 24-hour format
         if (ampm === 'PM' && hour !== 12) {
             hour += 12;
         } else if (ampm === 'AM' && hour === 12) {
             hour = 0;
         }
-        
+
         const timeKey = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-        
+
         // Find which group this stream belongs to (exact match logic from HTML)
         for (const [groupName, times] of Object.entries(timeSlotGroups)) {
             if (times.includes(timeKey)) {
@@ -1367,7 +1366,7 @@ function createDurationChart() {
                         startTimes: []
                     };
                 }
-                
+
                 groupedTimeData[groupName][item.date].totalViews += item.views;
                 groupedTimeData[groupName][item.date].totalEngagement += (item.comments + item.reactions + item.shares);
                 groupedTimeData[groupName][item.date].streamCount += 1;
@@ -1377,12 +1376,12 @@ function createDurationChart() {
             }
         }
     });
-    
+
     // Check if we have any time slot data
-    const hasTimeSlotData = Object.keys(groupedTimeData).some(group => 
+    const hasTimeSlotData = Object.keys(groupedTimeData).some(group =>
         Object.keys(groupedTimeData[group]).length > 0
     );
-    
+
     if (!hasTimeSlotData) {
         charts.durationChart = new Chart(ctx, {
             type: 'line',
@@ -1402,32 +1401,32 @@ function createDurationChart() {
         });
         return;
     }
-    
+
     // Create datasets for each time slot group
     const colors = [
         { bg: 'rgba(255, 99, 132, 0.6)', border: 'rgba(255, 99, 132, 1)' },      // Red for Afternoon
         { bg: 'rgba(54, 162, 235, 0.6)', border: 'rgba(54, 162, 235, 1)' },      // Blue for Early Evening
         { bg: 'rgba(255, 205, 86, 0.6)', border: 'rgba(255, 205, 86, 1)' }       // Yellow for Prime Time
     ];
-    
+
     // Get all unique dates for labels
     const allDates = new Set();
     Object.values(groupedTimeData).forEach(group => {
         Object.keys(group).forEach(date => allDates.add(date));
     });
-    
+
     const sortedDates = Array.from(allDates).sort((a, b) => new Date(a) - new Date(b));
-    
+
     // Create datasets
     const datasets = [];
     let colorIndex = 0;
-    
+
     Object.entries(groupedTimeData).forEach(([groupName, groupData]) => {
         if (Object.keys(groupData).length > 0) {
             const data = sortedDates.map(date => {
                 return groupData[date] ? groupData[date].totalViews : null;
             });
-            
+
             datasets.push({
                 label: groupName,
                 data: data,
@@ -1439,11 +1438,11 @@ function createDurationChart() {
                 spanGaps: false,
                 fill: false
             });
-            
+
             colorIndex++;
         }
     });
-    
+
     charts.durationChart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -1454,7 +1453,7 @@ function createDurationChart() {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: { 
+                legend: {
                     display: true,
                     position: 'top'
                 },
@@ -1466,7 +1465,7 @@ function createDurationChart() {
                             const groupName = Object.keys(groupedTimeData)[datasetIndex];
                             const date = sortedDates[dataIndex];
                             const dayData = groupedTimeData[groupName][date];
-                            
+
                             if (dayData) {
                                 const uniqueStartTimes = [...new Set(dayData.startTimes)].join(', ');
                                 return [
@@ -1516,16 +1515,16 @@ function updateDashboard() {
 // Function to normalize collaboration names for consistent ordering
 function normalizeCollaborationName(streamerName) {
     if (!streamerName) return '';
-    
+
     // Split the collaboration by "and" and commas
     const streamers = streamerName
         .split(/,\s*|\s+and\s+/i)
         .map(s => s.trim())
         .filter(s => s);
-    
+
     // Sort streamers alphabetically to create consistent ordering
     const sortedStreamers = streamers.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
-    
+
     // Rejoin with "and" for pairs or commas and "and" for multiple
     if (sortedStreamers.length === 2) {
         return sortedStreamers.join(' and ');
@@ -1540,7 +1539,7 @@ function normalizeCollaborationName(streamerName) {
 function populateCollaborationDropdown() {
     const collabFilter = document.getElementById('collabFilter');
     if (!collabFilter) return;
-    
+
     // Get unique collaborations from stream data with normalized names
     const collaborations = new Set();
     streamData.forEach(item => {
@@ -1549,13 +1548,13 @@ function populateCollaborationDropdown() {
             collaborations.add(normalizedName);
         }
     });
-    
+
     // Sort collaborations alphabetically
     const sortedCollaborations = Array.from(collaborations).sort();
-    
+
     // Clear existing options except "All Collaborations"
     collabFilter.innerHTML = '<option value="all">All Collaborations</option>';
-    
+
     // Add dynamic options
     sortedCollaborations.forEach(collab => {
         const option = document.createElement('option');
@@ -1565,57 +1564,8 @@ function populateCollaborationDropdown() {
     });
 }
 
-// Initialize dashboard
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Dashboard loaded with', streamData.length, 'streams');
-    populateCollaborationDropdown();
-    initializeCharts();
-    applyFilters();
-});
-
-// Auto-refresh every 5 minutes (disabled for static version)
-// For GitHub Pages deployment, data is static and doesn't need refreshing
-
-// Google Sheets Access Popup Functions
-function closePopup() {
-    const popup = document.getElementById('googleSheetsPopup');
-    popup.classList.add('hidden');
-    
-    // Store preference to not show popup again for this session
-    sessionStorage.setItem('popupDismissed', 'true');
-}
-
-// Show popup on page load (unless dismissed in current session)
-window.addEventListener('DOMContentLoaded', () => {
-    const popupDismissed = sessionStorage.getItem('popupDismissed');
-    
-    // Check if Google Sheets is configured by checking if we have real data
-    const hasRealData = streamData.length > 0 && streamData[0].startTime;
-    
-    // Show popup if not dismissed and no real Google Sheets data
-    if (!popupDismissed && !hasRealData) {
-        const popup = document.getElementById('googleSheetsPopup');
-        popup.classList.remove('hidden');
-    } else {
-        // Hide popup if Google Sheets is working or user dismissed it
-        const popup = document.getElementById('googleSheetsPopup');
-        popup.classList.add('hidden');
-    }
-});
-
-// Static data initialization - no popup needed for GitHub Pages version
-// Data is already loaded and ready to use
-        if (popup) {
-            popup.classList.add('hidden');
-            sessionStorage.setItem('popupDismissed', 'true');
-
-// HTML Export function (disabled for GitHub Pages)
-function exportToHTML() {
-    alert('Export feature not available in static GitHub Pages version');
-}
-
 // Initialize dashboard when page loads
-window.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM loaded, initializing dashboard...');
     console.log('Stream data length:', streamData.length);
     initializeDashboard();
@@ -1629,4 +1579,9 @@ if (document.readyState === 'loading') {
     console.log('DOM already ready, initializing dashboard...');
     console.log('Stream data length:', streamData.length);
     initializeDashboard();
+}
+
+// HTML Export function (disabled for GitHub Pages)
+function exportToHTML() {
+    alert('Export feature not available in static GitHub Pages version');
 }
