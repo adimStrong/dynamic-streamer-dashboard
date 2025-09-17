@@ -78,19 +78,21 @@ let charts = {};
 // Initialize dashboard without server connection
 function initializeDashboard() {
     console.log('Initializing D.A Dashboard with static data');
-    updateConnectionStatus(true); // Set as connected since we have static data
-            comments: item.comments || 0,
-            reactions: item.reactions || 0,
-            shares: item.shares || 0,
-            linkClicks: item.linkClicks || 0,
-            newFollowers: item.newFollowers || 0,
-            totalFollowers: item.totalFollowers || 0,
-            extraNewFollowers: item.extraNewFollowers || 0,
-            streamer: item.streamer || 'Unknown',
+    console.log('Available stream data:', streamData.length, 'records');
 
-    // Refresh dashboard
+    updateConnectionStatus(true); // Set as connected since we have static data
+
+    // Ensure data is properly initialized
+    filteredData = [...streamData];
+    console.log('Filtered data initialized:', filteredData.length, 'records');
+
+    // Populate the collaboration dropdown
     populateCollaborationDropdown();
+
+    // Apply filters and update all dashboard components
     applyFilters();
+
+    console.log('Dashboard initialization complete');
 }
 
 // Utility functions
@@ -1614,7 +1616,17 @@ function exportToHTML() {
 
 // Initialize dashboard when page loads
 window.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing dashboard...');
+    console.log('Stream data length:', streamData.length);
     initializeDashboard();
-    populateCollaborationDropdown();
-    applyFilters();
 });
+
+// Backup initialization in case DOMContentLoaded already fired
+if (document.readyState === 'loading') {
+    // DOM not ready yet, wait for DOMContentLoaded
+} else {
+    // DOM is ready, initialize immediately
+    console.log('DOM already ready, initializing dashboard...');
+    console.log('Stream data length:', streamData.length);
+    initializeDashboard();
+}
