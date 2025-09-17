@@ -1,6 +1,10 @@
-// D.A Streaming Analytics Dashboard - Static version for GitHub Pages
+// D.A Streaming Analytics Dashboard - GitHub Pages version with Google Sheets integration
 
-// Complete dataset from your original file (all 66 streams)
+// Google Sheets Configuration
+const SHEETS_ID = '1SyplmNbPp3kfLFjhD-n1ZO0q8g1gF_GvaqmQXj_QLZQ';
+const API_KEY = 'AIzaSyBBPe8nxlLRAWfLMWMrKQJ5iwtdOHiDvt8';
+
+// Initial dataset (will be replaced by Google Sheets data)
 let streamData = [
     {date: '2025-08-09', views: 1037, comments: 257, reactions: 131, shares: 282, linkClicks: 1, newFollowers: 7, totalFollowers: 294, extraNewFollowers: 294, streamer: 'Abi and Sena', type: 'live'},
     {date: '2025-08-10', views: 931, comments: 298, reactions: 78, shares: 282, linkClicks: 0, newFollowers: 1, totalFollowers: 346, extraNewFollowers: 52, streamer: 'Abi and Sena', type: 'live'},
@@ -92,6 +96,155 @@ function initializeDashboard() {
     applyFilters();
 
     console.log('Dashboard initialization complete');
+
+    // Fetch Google Sheets data
+    fetchGoogleSheetsData();
+
+    // Set up auto-refresh every 5 minutes
+    setInterval(fetchGoogleSheetsData, 5 * 60 * 1000);
+}
+
+// Google Sheets data fetching functions
+async function fetchGoogleSheetsData() {
+    try {
+        console.log('Fetching data from Google Sheets...');
+        updateConnectionStatus(false); // Show as loading
+
+        const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/D.A!A1:Z1000?key=${API_KEY}`;
+
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const rows = data.values || [];
+
+        if (rows.length === 0) {
+            console.log('No data found in Google Sheets');
+            return;
+        }
+
+        // Process the data using the same logic as localhost:3000
+        const processedData = processGoogleSheetsData(rows);
+
+        if (processedData.length > 0) {
+            console.log(`Fetched ${processedData.length} records from Google Sheets`);
+            streamData = processedData;
+            filteredData = [...streamData];
+
+            // Update the dashboard with new data
+            populateCollaborationDropdown();
+            applyFilters();
+            updateConnectionStatus(true);
+        }
+
+    } catch (error) {
+        console.error('Error fetching Google Sheets data:', error);
+        updateConnectionStatus(false);
+    }
+}
+
+function processGoogleSheetsData(rows) {
+    if (rows.length === 0) return [];
+
+    const headers = rows[0].map(header => header.toString().trim());
+    const dataRows = rows.slice(1);
+
+    console.log('Headers found:', headers);
+    console.log(`Processing ${dataRows.length} data rows`);
+
+    const streamers = dataRows.map((row, index) => {
+        const item = {};
+        headers.forEach((header, colIndex) => {
+            item[header] = row[colIndex] || '';
+        });
+
+        // Parse date using the same logic as localhost:3000
+        let dateStr = item['DATE'] || item.Date || item.date || '';
+        let parsedDate = null;
+
+        if (dateStr) {
+            if (typeof dateStr === 'string' && dateStr.includes('/')) {
+                const [month, day, year] = dateStr.split('/');
+                if (month && day && year) {
+                    const fullYear = year.length === 2 ? `20${year}` : year;
+                    parsedDate = `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+                }
+            } else if (typeof dateStr === 'number') {
+                // Excel serial date
+                const excelEpoch = new Date(1899, 11, 30);
+                const date = new Date(excelEpoch.getTime() + dateStr * 24 * 60 * 60 * 1000);
+                parsedDate = date.toISOString().split('T')[0];
+            }
+        }
+
+        if (!parsedDate) {
+            console.log(`Skipping row ${index + 2} - invalid date: "${dateStr}"`);
+            return null;
+        }
+
+        // Use the exact same column mapping as localhost:3000
+        return {
+            date: parsedDate,
+            views: parseInt((item['TOTAL VIEWS'] || item.Views || item.views || '0').toString().replace(/,/g, '')) || 0,
+            comments: parseInt((item['COMMENTS'] || item.Comments || item.comments || '0').toString().replace(/,/g, '')) || 0,
+            reactions: parseInt((item['REACTIONS'] || item.Reactions || item.reactions || '0').toString().replace(/,/g, '')) || 0,
+            shares: parseInt((item['SHARE'] || item.Shares || item.shares || '0').toString().replace(/,/g, '')) || 0,
+            linkClicks: parseInt((item['LINK CLICKS'] || item.LinkClicks || item.linkClicks || '0').toString().replace(/,/g, '')) || 0,
+            newFollowers: parseInt((item['EOD New Follower'] || item['New Followers'] || item.newFollowers || '0').toString().replace(/,/g, '')) || 0,
+            totalFollowers: parseInt((item['OVERALL TOTAL FOLLOWERS'] || item['Total Followers'] || item.totalFollowers || '0').toString().replace(/,/g, '')) || 0,
+            extraNewFollowers: parseInt((item['EOD New Follower'] || item['Extra New Followers'] || item.extraNewFollowers || '0').toString().replace(/,/g, '')) || 0,
+            streamer: capitalizeNames(item['STREAMER'] || item.Streamer || item.streamer || 'Unknown'),
+            type: (item['TYPE'] || item.Type || item.type || 'live').toLowerCase(),
+            startTime: item['START TIME'] || item.StartTime || item.startTime || '',
+            endTime: item['END TIME'] || item.EndTime || item.endTime || ''
+        };
+    }).filter(item => item !== null);
+
+    // Sort by date (latest first)
+    streamers.sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return dateB - dateA;
+    });
+
+    console.log(`Processed ${streamers.length} valid records`);
+    return streamers;
+}
+
+// Helper function to capitalize names (same as localhost:3000)
+function capitalizeNames(nameString) {
+    if (!nameString || typeof nameString !== 'string') return nameString;
+
+    nameString = nameString.trim();
+
+    const commaParts = nameString.split(',').map(part => part.trim());
+
+    const processedParts = commaParts.map(part => {
+        return part
+            .split(/\s+and\s+/i)
+            .map(name => {
+                name = name.trim();
+                if (!name) return '';
+
+                const lowerName = name.toLowerCase();
+                if (lowerName === 'and') return 'and';
+                if (lowerName === 'g') return 'G';
+                if (!lowerName) return '';
+
+                return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+            })
+            .filter(name => name)
+            .join(' and ');
+    });
+
+    if (processedParts.length > 1) {
+        const lastPart = processedParts.pop();
+        return processedParts.join(', ') + ' and ' + lastPart;
+    } else {
+        return processedParts[0] || '';
+    }
 }
 
 // Utility functions
@@ -123,10 +276,10 @@ function getStreamerTag(streamer) {
 function updateConnectionStatus(connected) {
     const statusElement = document.getElementById('statusText');
     if (connected) {
-        statusElement.textContent = '🟢 Connected - Live Updates';
+        statusElement.textContent = '🟢 Connected - Google Sheets Live Updates';
         statusElement.className = 'status-connected';
     } else {
-        statusElement.textContent = '🔴 Disconnected - Retrying...';
+        statusElement.textContent = '🔄 Loading Google Sheets Data...';
         statusElement.className = 'status-disconnected';
     }
 }
