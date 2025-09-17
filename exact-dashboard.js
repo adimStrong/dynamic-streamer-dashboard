@@ -97,8 +97,19 @@ function initializeDashboard() {
 
     console.log('Dashboard initialization complete');
 
-    // Fetch Google Sheets data
+    // Fetch Google Sheets data (with 10 second timeout fallback)
     fetchGoogleSheetsData();
+
+    // Fallback timeout in case Google Sheets takes too long
+    setTimeout(() => {
+        const statusElement = document.getElementById('statusText');
+        if (statusElement && statusElement.textContent.includes('Loading')) {
+            console.log('Google Sheets timeout - falling back to static data');
+            updateConnectionStatus(true);
+            statusElement.textContent = '⚠️ Using Static Data - Google Sheets Timeout';
+            statusElement.className = 'status-disconnected';
+        }
+    }, 10000);
 
     // Set up auto-refresh every 5 minutes
     setInterval(fetchGoogleSheetsData, 5 * 60 * 1000);
@@ -108,20 +119,31 @@ function initializeDashboard() {
 async function fetchGoogleSheetsData() {
     try {
         console.log('Fetching data from Google Sheets...');
+        console.log('Sheets ID:', SHEETS_ID);
+        console.log('API Key:', API_KEY ? `${API_KEY.substring(0, 10)}...` : 'MISSING');
         updateConnectionStatus(false); // Show as loading
 
         const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/D.A!A1:Z1000?key=${API_KEY}`;
+        console.log('Request URL:', url);
 
         const response = await fetch(url);
+        console.log('Response status:', response.status);
+        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            const errorText = await response.text();
+            console.error('Error response:', errorText);
+            throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
 
         const data = await response.json();
+        console.log('Google Sheets response:', data);
         const rows = data.values || [];
 
         if (rows.length === 0) {
             console.log('No data found in Google Sheets');
+            // Fall back to static data and show as connected
+            updateConnectionStatus(true);
             return;
         }
 
@@ -137,11 +159,31 @@ async function fetchGoogleSheetsData() {
             populateCollaborationDropdown();
             applyFilters();
             updateConnectionStatus(true);
+        } else {
+            console.log('No valid data processed from Google Sheets');
+            // Fall back to static data and show as connected
+            updateConnectionStatus(true);
         }
 
     } catch (error) {
         console.error('Error fetching Google Sheets data:', error);
-        updateConnectionStatus(false);
+        console.error('Error details:', {
+            name: error.name,
+            message: error.message,
+            stack: error.stack
+        });
+
+        // Fall back to static data and show as connected with error note
+        updateConnectionStatus(true);
+
+        // Show user-friendly error message
+        setTimeout(() => {
+            const statusElement = document.getElementById('statusText');
+            if (statusElement) {
+                statusElement.textContent = '⚠️ Using Static Data - Google Sheets Unavailable';
+                statusElement.className = 'status-disconnected';
+            }
+        }, 2000);
     }
 }
 
