@@ -1,8 +1,11 @@
 // D.A Streaming Analytics Dashboard - GitHub Pages version with Google Sheets integration
 
-// Google Sheets Configuration - Using CSV export to bypass CORS
+// Google Sheets Configuration - Using CORS proxy for API access
 const SHEETS_ID = '1SyplmNbPp3kfLFjhD-n1ZO0q8g1gF_GvaqmQXj_QLZQ';
-const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEETS_ID}/export?format=csv&gid=0`;
+const API_KEY = 'AIzaSyBBPe8nxlLRAWfLMWMrKQJ5iwtdOHiDvt8';
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+const SHEETS_API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/D.A!A1:Z1000?key=${API_KEY}`;
+const PROXIED_URL = CORS_PROXY + encodeURIComponent(SHEETS_API_URL);
 
 // Initial dataset (will be replaced by Google Sheets data)
 let streamData = [
@@ -118,11 +121,11 @@ function initializeDashboard() {
 // Google Sheets data fetching functions
 async function fetchGoogleSheetsData() {
     try {
-        console.log('Fetching data from Google Sheets CSV...');
-        console.log('CSV URL:', CSV_URL);
+        console.log('Fetching data from Google Sheets API via CORS proxy...');
+        console.log('Proxied URL:', PROXIED_URL);
         updateConnectionStatus(false); // Show as loading
 
-        const response = await fetch(CSV_URL);
+        const response = await fetch(PROXIED_URL);
         console.log('Response status:', response.status);
 
         if (!response.ok) {
@@ -131,16 +134,12 @@ async function fetchGoogleSheetsData() {
             throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
 
-        const csvText = await response.text();
-        console.log('CSV response length:', csvText.length);
-        console.log('CSV first 500 chars:', csvText.substring(0, 500));
-
-        // Parse CSV data
-        const rows = parseCSV(csvText);
-        console.log('Parsed CSV rows:', rows.length);
+        const data = await response.json();
+        console.log('Google Sheets API response:', data);
+        const rows = data.values || [];
 
         if (rows.length === 0) {
-            console.log('No data found in Google Sheets CSV');
+            console.log('No data found in Google Sheets');
             // Fall back to static data and show as connected
             updateConnectionStatus(true);
             return;
@@ -150,7 +149,7 @@ async function fetchGoogleSheetsData() {
         const processedData = processGoogleSheetsData(rows);
 
         if (processedData.length > 0) {
-            console.log(`Fetched ${processedData.length} records from Google Sheets CSV`);
+            console.log(`Fetched ${processedData.length} records from Google Sheets API`);
             streamData = processedData;
             filteredData = [...streamData];
 
@@ -159,13 +158,13 @@ async function fetchGoogleSheetsData() {
             applyFilters();
             updateConnectionStatus(true);
         } else {
-            console.log('No valid data processed from Google Sheets CSV');
+            console.log('No valid data processed from Google Sheets');
             // Fall back to static data and show as connected
             updateConnectionStatus(true);
         }
 
     } catch (error) {
-        console.error('Error fetching Google Sheets CSV data:', error);
+        console.error('Error fetching Google Sheets API data:', error);
         console.error('Error details:', {
             name: error.name,
             message: error.message,
@@ -186,38 +185,6 @@ async function fetchGoogleSheetsData() {
     }
 }
 
-// Simple CSV parser
-function parseCSV(csvText) {
-    const lines = csvText.split('\n');
-    const result = [];
-
-    for (let line of lines) {
-        if (line.trim()) {
-            // Handle CSV with proper quote parsing
-            const row = [];
-            let current = '';
-            let inQuotes = false;
-
-            for (let i = 0; i < line.length; i++) {
-                const char = line[i];
-
-                if (char === '"') {
-                    inQuotes = !inQuotes;
-                } else if (char === ',' && !inQuotes) {
-                    row.push(current.trim());
-                    current = '';
-                } else {
-                    current += char;
-                }
-            }
-            row.push(current.trim());
-            result.push(row);
-        }
-    }
-
-    console.log('CSV parsing result - first row:', result[0]);
-    return result;
-}
 
 function processGoogleSheetsData(rows) {
     if (rows.length === 0) return [];
