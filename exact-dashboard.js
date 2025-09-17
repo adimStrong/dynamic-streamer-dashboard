@@ -1,11 +1,7 @@
 // D.A Streaming Analytics Dashboard - GitHub Pages version with Google Sheets integration
 
-// Google Sheets Configuration - Using CORS proxy for API access
-const SHEETS_ID = '1SyplmNbPp3kfLFjhD-n1ZO0q8g1gF_GvaqmQXj_QLZQ';
-const API_KEY = 'AIzaSyBBPe8nxlLRAWfLMWMrKQJ5iwtdOHiDvt8';
-const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
-const SHEETS_API_URL = `https://sheets.googleapis.com/v4/spreadsheets/${SHEETS_ID}/values/D.A!A1:Z1000?key=${API_KEY}`;
-const PROXIED_URL = CORS_PROXY + encodeURIComponent(SHEETS_API_URL);
+// Data Configuration - Fetch from localhost:3000 API endpoint
+const LOCALHOST_API = 'http://localhost:3000/api/data';
 
 // Initial dataset (will be replaced by Google Sheets data)
 let streamData = [
@@ -118,14 +114,14 @@ function initializeDashboard() {
     setInterval(fetchGoogleSheetsData, 5 * 60 * 1000);
 }
 
-// Google Sheets data fetching functions
+// Data fetching functions
 async function fetchGoogleSheetsData() {
     try {
-        console.log('Fetching data from Google Sheets API via CORS proxy...');
-        console.log('Proxied URL:', PROXIED_URL);
+        console.log('Fetching data from localhost:3000 API...');
+        console.log('API URL:', LOCALHOST_API);
         updateConnectionStatus(false); // Show as loading
 
-        const response = await fetch(PROXIED_URL);
+        const response = await fetch(LOCALHOST_API);
         console.log('Response status:', response.status);
 
         if (!response.ok) {
@@ -135,36 +131,28 @@ async function fetchGoogleSheetsData() {
         }
 
         const data = await response.json();
-        console.log('Google Sheets API response:', data);
-        const rows = data.values || [];
+        console.log('Localhost API response:', data);
 
-        if (rows.length === 0) {
-            console.log('No data found in Google Sheets');
+        // Check if we have streamers data
+        if (!data.streamers || data.streamers.length === 0) {
+            console.log('No streamers data found from localhost API');
             // Fall back to static data and show as connected
             updateConnectionStatus(true);
             return;
         }
 
-        // Process the data using the same logic as localhost:3000
-        const processedData = processGoogleSheetsData(rows);
+        // Use the data directly from the API (already processed by localhost:3000)
+        console.log(`Fetched ${data.streamers.length} records from localhost:3000 API`);
+        streamData = data.streamers;
+        filteredData = [...streamData];
 
-        if (processedData.length > 0) {
-            console.log(`Fetched ${processedData.length} records from Google Sheets API`);
-            streamData = processedData;
-            filteredData = [...streamData];
-
-            // Update the dashboard with new data
-            populateCollaborationDropdown();
-            applyFilters();
-            updateConnectionStatus(true);
-        } else {
-            console.log('No valid data processed from Google Sheets');
-            // Fall back to static data and show as connected
-            updateConnectionStatus(true);
-        }
+        // Update the dashboard with new data
+        populateCollaborationDropdown();
+        applyFilters();
+        updateConnectionStatus(true);
 
     } catch (error) {
-        console.error('Error fetching Google Sheets API data:', error);
+        console.error('Error fetching localhost API data:', error);
         console.error('Error details:', {
             name: error.name,
             message: error.message,
@@ -178,7 +166,7 @@ async function fetchGoogleSheetsData() {
         setTimeout(() => {
             const statusElement = document.getElementById('statusText');
             if (statusElement) {
-                statusElement.textContent = '⚠️ Using Static Data - Google Sheets Unavailable';
+                statusElement.textContent = '⚠️ Using Static Data - Localhost Server Unavailable';
                 statusElement.className = 'status-disconnected';
             }
         }, 2000);
@@ -186,107 +174,7 @@ async function fetchGoogleSheetsData() {
 }
 
 
-function processGoogleSheetsData(rows) {
-    if (rows.length === 0) return [];
-
-    const headers = rows[0].map(header => header.toString().trim());
-    const dataRows = rows.slice(1);
-
-    console.log('Headers found:', headers);
-    console.log(`Processing ${dataRows.length} data rows`);
-
-    const streamers = dataRows.map((row, index) => {
-        const item = {};
-        headers.forEach((header, colIndex) => {
-            item[header] = row[colIndex] || '';
-        });
-
-        // Parse date using the same logic as localhost:3000
-        let dateStr = item['DATE'] || item.Date || item.date || '';
-        let parsedDate = null;
-
-        if (dateStr) {
-            if (typeof dateStr === 'string' && dateStr.includes('/')) {
-                const [month, day, year] = dateStr.split('/');
-                if (month && day && year) {
-                    const fullYear = year.length === 2 ? `20${year}` : year;
-                    parsedDate = `${fullYear}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
-                }
-            } else if (typeof dateStr === 'number') {
-                // Excel serial date
-                const excelEpoch = new Date(1899, 11, 30);
-                const date = new Date(excelEpoch.getTime() + dateStr * 24 * 60 * 60 * 1000);
-                parsedDate = date.toISOString().split('T')[0];
-            }
-        }
-
-        if (!parsedDate) {
-            console.log(`Skipping row ${index + 2} - invalid date: "${dateStr}"`);
-            return null;
-        }
-
-        // Use the exact same column mapping as localhost:3000
-        return {
-            date: parsedDate,
-            views: parseInt((item['TOTAL VIEWS'] || item.Views || item.views || '0').toString().replace(/,/g, '')) || 0,
-            comments: parseInt((item['COMMENTS'] || item.Comments || item.comments || '0').toString().replace(/,/g, '')) || 0,
-            reactions: parseInt((item['REACTIONS'] || item.Reactions || item.reactions || '0').toString().replace(/,/g, '')) || 0,
-            shares: parseInt((item['SHARE'] || item.Shares || item.shares || '0').toString().replace(/,/g, '')) || 0,
-            linkClicks: parseInt((item['LINK CLICKS'] || item.LinkClicks || item.linkClicks || '0').toString().replace(/,/g, '')) || 0,
-            newFollowers: parseInt((item['EOD New Follower'] || item['New Followers'] || item.newFollowers || '0').toString().replace(/,/g, '')) || 0,
-            totalFollowers: parseInt((item['OVERALL TOTAL FOLLOWERS'] || item['Total Followers'] || item.totalFollowers || '0').toString().replace(/,/g, '')) || 0,
-            extraNewFollowers: parseInt((item['EOD New Follower'] || item['Extra New Followers'] || item.extraNewFollowers || '0').toString().replace(/,/g, '')) || 0,
-            streamer: capitalizeNames(item['STREAMER'] || item.Streamer || item.streamer || 'Unknown'),
-            type: (item['TYPE'] || item.Type || item.type || 'live').toLowerCase(),
-            startTime: item['START TIME'] || item.StartTime || item.startTime || '',
-            endTime: item['END TIME'] || item.EndTime || item.endTime || ''
-        };
-    }).filter(item => item !== null);
-
-    // Sort by date (latest first)
-    streamers.sort((a, b) => {
-        const dateA = new Date(a.date);
-        const dateB = new Date(b.date);
-        return dateB - dateA;
-    });
-
-    console.log(`Processed ${streamers.length} valid records`);
-    return streamers;
-}
-
-// Helper function to capitalize names (same as localhost:3000)
-function capitalizeNames(nameString) {
-    if (!nameString || typeof nameString !== 'string') return nameString;
-
-    nameString = nameString.trim();
-
-    const commaParts = nameString.split(',').map(part => part.trim());
-
-    const processedParts = commaParts.map(part => {
-        return part
-            .split(/\s+and\s+/i)
-            .map(name => {
-                name = name.trim();
-                if (!name) return '';
-
-                const lowerName = name.toLowerCase();
-                if (lowerName === 'and') return 'and';
-                if (lowerName === 'g') return 'G';
-                if (!lowerName) return '';
-
-                return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
-            })
-            .filter(name => name)
-            .join(' and ');
-    });
-
-    if (processedParts.length > 1) {
-        const lastPart = processedParts.pop();
-        return processedParts.join(', ') + ' and ' + lastPart;
-    } else {
-        return processedParts[0] || '';
-    }
-}
+// Data processing functions removed - using pre-processed data from localhost:3000 API
 
 // Utility functions
 function formatDate(dateStr) {
